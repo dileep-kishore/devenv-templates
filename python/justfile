@@ -1,2 +1,4 @@
 update:
     uv lock --upgrade
+clean-env:
+    rm -rf .devenv .direnv .venv flake.lock poetry.lock
