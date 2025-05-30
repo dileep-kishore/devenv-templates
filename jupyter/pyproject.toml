@@ -16,3 +16,6 @@ dev = [
 
 [tool.setuptools]
 packages = ["<src-dir>"]
+
+[tool.marimo.runtime]
+watcher_on_save = "autorun"
