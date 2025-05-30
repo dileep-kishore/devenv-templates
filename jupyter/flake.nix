@@ -1,43 +1,75 @@
 {
-  description = "Your jupyenv project";
+  # TODO: Add a description
+  description = "Description of project";
 
-  nixConfig.extra-substituters = [
-    "https://tweag-jupyter.cachix.org"
-  ];
-  nixConfig.extra-trusted-public-keys = [
-    "tweag-jupyter.cachix.org-1:UtNH4Zs6hVUFpFBTLaA4ejYavPo5EFFqgd7G7FxGW9g="
-  ];
-
-  inputs.flake-compat.url = "github:edolstra/flake-compat";
-  inputs.flake-compat.flake = false;
-  inputs.flake-utils.url = "github:numtide/flake-utils";
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-  inputs.jupyenv.url = "github:tweag/jupyenv";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
+    devenv.url = "github:cachix/devenv";
+  };
+  nixConfig = {
+    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
+    extra-substituters = "https://devenv.cachix.org";
+  };
 
   outputs = {
     self,
-    flake-compat,
-    flake-utils,
     nixpkgs,
-    jupyenv,
+    devenv,
+    systems,
     ...
-  } @ inputs:
-    flake-utils.lib.eachSystem
-    [
-      flake-utils.lib.system.x86_64-linux
-    ]
-    (
-      system: let
-        inherit (jupyenv.lib.${system}) mkJupyterlabNew;
-        jupyterlab = mkJupyterlabNew ({...}: {
-          nixpkgs = inputs.nixpkgs;
-          imports = [(import ./kernels.nix)];
-        });
-      in rec {
-        packages = {inherit jupyterlab;};
-        packages.default = jupyterlab;
-        apps.default.program = "${jupyterlab}/bin/jupyter-lab";
-        apps.default.type = "app";
-      }
-    );
+  } @ inputs: let
+    forEachSystem = nixpkgs.lib.genAttrs (import systems);
+  in {
+    packages = forEachSystem (system: {
+      devenv-up = self.devShells.${system}.default.config.procfileScript;
+    });
+
+    devShells = forEachSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      default = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          {
+            packages = with pkgs; [
+              zlib
+              ruff
+              just
+            ];
+
+            env = {GREET = "󱄅 Nix";};
+
+            scripts.hello.exec = "echo $GREET";
+
+            languages.python = {
+              package = pkgs.python313;
+              enable = true;
+              uv = {
+                enable = true;
+                sync.enable = true;
+                sync.allExtras = true;
+              };
+              venv = {enable = true;};
+            };
+
+            pre-commit.hooks = {
+              ruff.enable = false;
+              shellcheck.enable = true;
+              markdownlint.enable = true;
+              alejandra.enable = true;
+              editorconfig-checker.enable = true;
+            };
+
+            dotenv.enable = true;
+
+            env.LD_LIBRARY_PATH = with pkgs;
+              lib.makeLibraryPath [
+                zlib
+              ];
+          }
+        ];
+      };
+    });
+  };
 }

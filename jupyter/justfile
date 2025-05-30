@@ -1,0 +1,23 @@
+default:
+    @just --list --unsorted
+
+alias u := update
+alias i := install
+alias ce := clean-env
+alias ew := edit-watch
+alias rw := run-watch
+
+update:
+    uv lock --upgrade
+
+install:
+    uv sync && uv pip install -e .
+
+clean-env:
+    rm -rf .devenv .direnv .venv flake.lock poetry.lock
+
+edit-watch file:
+    cd <notebook-path> && marimo edit {{file}} --watch
+
+run-watch file:
+    cd <notebook-path> && marimo run {{file}} --watch

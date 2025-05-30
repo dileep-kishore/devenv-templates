@@ -1,0 +1,18 @@
+[project]
+name = "<project-name>"
+version = "0.1.0"
+description = "<project-description>"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+]
+
+[dependency-groups]
+dev = [
+"ipython",
+"jupyter",
+"jupyterlab",
+]
+
+[tool.setuptools]
+packages = ["<src-dir>"]
