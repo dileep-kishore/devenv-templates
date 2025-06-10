@@ -19,3 +19,7 @@ packages = ["<src-dir>"]
 
 [tool.marimo.runtime]
 watcher_on_save = "autorun"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

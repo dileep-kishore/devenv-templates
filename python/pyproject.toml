@@ -13,3 +13,7 @@ dev = [
 
 [tool.setuptools]
 packages = ["<src-dir>"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
