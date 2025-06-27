@@ -18,6 +18,10 @@
         path = ./julia;
         description = "Julia development environment";
       };
+      micromamba = {
+        path = ./micromamba;
+        description = "Micromamba environment for Python";
+      };
     };
   };
 }

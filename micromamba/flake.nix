@@ -1,80 +1,46 @@
 {
-  # TODO: Add a description
-  description = "Description of project";
+  # TODO: Update the description
+  description = "A project with a Micromamba FHS environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    devenv.url = "github:cachix/devenv";
-    flake-parts.url = "github:hercules-ci/flake-parts";
-  };
-  nixConfig = {
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
-    extra-substituters = "https://devenv.cachix.org";
+    systems.url = "github:nix-systems/default";
   };
 
   outputs = {
-    devenv,
-    flake-parts,
+    self,
+    nixpkgs,
+    systems,
     ...
-  } @ inputs:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
-      imports = [devenv.flakeModule];
+  } @ inputs: let
+    forEachSystem = nixpkgs.lib.genAttrs (import systems);
+  in {
+    packages = forEachSystem (system: {
+      # example-package = pkgs.hello;
+    });
 
-      perSystem = {
-        config,
-        self',
-        inputs',
-        pkgs,
-        system,
-        ...
-      }: {
-        # Per-system attributes can be defined here. The self' and inputs'
-        # module parameters provide easy access to attributes of the same
-        # system.
+    devShells = forEachSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      # <<< The FHS shell is now the default shell >>>
+      default = pkgs.buildFHSUserEnv {
+        name = "mamba-fhs-environment";
+        targetPkgs = _: [
+          pkgs.micromamba
+          pkgs.zlib
+          pkgs.ruff
+          pkgs.just
+        ];
+        profile = ''
+          set -e
+          eval "$(micromamba shell hook --shell=zsh)"
 
-        # needed for devenv up
-        packages.devenv-up = self'.devShells.default.config.procfileScript;
+          micromamba activate my-mamba-environment
 
-        devenv.shells.default = {
-          name = "micromamba";
-
-          env.MAMBA_ROOT_PREFIX = "${config.env.DEVENV_STATE}/micromamba";
-          env.GREET = "󱄅 Nix";
-          scripts.hello.exec = "echo $GREET";
-
-          packages = with pkgs; [
-            micromamba
-            stdenv.cc.cc.lib # required by Jupyter
-            zlib
-            glibc
-            python311Packages.pip
-            ruff
-            nodePackages.pyright
-            just
-          ];
-
-          pre-commit.hooks = {
-            ruff.enable = true;
-            shellcheck.enable = true;
-            markdownlint.enable = true;
-            alejandra.enable = true;
-            editorconfig-checker.enable = true;
-          };
-
-          dotenv.enable = true;
-
-          env.LD_LIBRARY_PATH = with pkgs;
-            lib.makeLibraryPath [
-              stdenv.cc.cc.lib
-              zlib
-            ];
-
-          enterShell = ''
-            set -h
-            eval "$(micromamba shell hook --shell=bash)"
-          '';
-        };
+          echo "FHS Mamba environment is ready!"
+          set +e
+        '';
       };
-    };
+    });
+  };
 }
